@@ -1,8 +1,11 @@
 import time
 from discord.player import FFmpegPCMAudio
+from discord import Embed
 from subprocess import run
 import tempfile
 from os import path
+
+import youtube_dl
 
 class Guild_Instance():
     def __init__(self, vc=None):
@@ -38,10 +41,21 @@ async def play(*args, msg, client):
 
     link = ' '.join(args)
 
-    tmpdir = tempfile.TemporaryDirectory()
-    file = path.join(tmpdir.name, 'audio.opus')
-    run(['youtube-dl', '-x', '--audio-format', 'opus', '--default-search', 'ytsearch', link, '-o', file])
+    # tmpdir = tempfile.TemporaryDirectory()
+    # file = path.join(tmpdir.name, 'audio.opus')
+    # run(['youtube-dl', '-x', '--audio-format', 'opus', '--default-search', 'ytsearch', link, '-o', file])
 
     print(f'"{link}" downloaded!')
 
-    ginstance.vc.play(FFmpegPCMAudio(file), after=lambda e: tmpdir.cleanup())
+    ytdl_options = {
+        'format': 'bestaudio'
+    }
+
+    with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+        search = ytdl.extract_info(f'ytsearch:{link}', False)
+        print(search['entries'][0])
+        
+
+
+    ginstance.vc.play(FFmpegPCMAudio(search['entries'][0]['formats'][0]['url']), after=lambda e: print("krai"))
+
