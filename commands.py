@@ -1,5 +1,4 @@
 import time
-
 from discord.player import FFmpegPCMAudio
 from subprocess import run
 import tempfile
@@ -9,28 +8,17 @@ async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
 async def play(*args, msg, client):
-    def track_end(error):
-        if error != None:
-            print(error)
-        else:
-            print("Finished track")
-
-
     channel = msg.author.voice.channel
+    if channel == None:
+        return
 
-    link = args[0]
-    from os import listdir
-    # with tempfile.TemporaryDirectory() as tmpdir:
+    link = ' '.join(args)
+
     tmpdir = tempfile.TemporaryDirectory()
     file = path.join(tmpdir.name, 'audio.opus')
-    run(['youtube-dl', '-x', '--audio-format', 'opus', link, '-o', file])
+    run(['youtube-dl', '-x', '--audio-format', 'opus', '--default-search', 'ytsearch', link, '-o', file])
 
+    print(f'"{link}" downloaded!')
 
-    if channel != None:
-        vc = await channel.connect()
-
-        vc.play(FFmpegPCMAudio(file), after=lambda e: tmpdir.cleanup())
-
-
-
-        
+    vc = await channel.connect()
+    vc.play(FFmpegPCMAudio(file), after=lambda e: tmpdir.cleanup())
