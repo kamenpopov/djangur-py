@@ -1,5 +1,5 @@
 import discord
-from commands import ping
+from commands import *
 import json
 
 with open('config.json') as f:
@@ -26,5 +26,7 @@ async def on_message(msg):
 
     if cmd == 'ping':
         await ping(*args, msg=msg, client=client)
+    elif cmd == 'play':
+        await play(*args, msg=msg, client=client)
 
 client.run(config['token'])
