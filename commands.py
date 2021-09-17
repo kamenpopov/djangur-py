@@ -41,20 +41,18 @@ async def play(*args, msg, client):
 
     link = ' '.join(args)
 
-    # tmpdir = tempfile.TemporaryDirectory()
-    # file = path.join(tmpdir.name, 'audio.opus')
-    # run(['youtube-dl', '-x', '--audio-format', 'opus', '--default-search', 'ytsearch', link, '-o', file])
-
-    print(f'"{link}" downloaded!')
-
     ytdl_options = {
         'format': 'bestaudio'
     }
 
     with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
         search = ytdl.extract_info(f'ytsearch:{link}', False)
+
         print(search['entries'][0])
-        
+
+        embed = Embed(title="Gosho", description="SEXY SEX WITH MY COCK AND YOUR BUSSY", color=0x00ffff)
+        embed.set_thumbnail()
+        await msg.channel.send(embed=embed)
 
 
     ginstance.vc.play(FFmpegPCMAudio(search['entries'][0]['formats'][0]['url']), after=lambda e: print("krai"))
