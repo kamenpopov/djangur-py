@@ -4,8 +4,14 @@ from discord import Embed
 from subprocess import run
 import tempfile
 from os import path
-
 import youtube_dl
+
+class Commands():
+    command_map = {}
+    @staticmethod
+    def add(f):
+        Commands.command_map[f.__name__] = f
+        return f
 
 class Guild_Instance():
     def __init__(self, vc=None):
@@ -26,10 +32,12 @@ class Guild_Instance():
 guild_instances = {}
 
 
+@Commands.add
 async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
 
+@Commands.add
 async def play(*args, msg, client):
     global guild_instances
 
@@ -51,9 +59,7 @@ async def play(*args, msg, client):
         print(search['entries'][0])
 
         embed = Embed(title="Gosho", description="SEXY SEX WITH MY COCK AND YOUR BUSSY", color=0x00ffff)
-        embed.set_thumbnail()
         await msg.channel.send(embed=embed)
 
 
     ginstance.vc.play(FFmpegPCMAudio(search['entries'][0]['formats'][0]['url']), after=lambda e: print("krai"))
-

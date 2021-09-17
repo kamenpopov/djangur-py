@@ -1,5 +1,5 @@
 import discord
-from commands import *
+from commands import Commands
 import json
 
 with open('config.json') as f:
@@ -24,9 +24,9 @@ async def on_message(msg):
     cmd = split[0]
     args = split[1:]
 
-    if cmd == 'ping':
-        await ping(*args, msg=msg, client=client)
-    elif cmd == 'play':
-        await play(*args, msg=msg, client=client)
+    if cmd in Commands.command_map:
+        await Commands.command_map[cmd](*args, msg=msg, client=client)
+    else:
+        msg.channel.send(f'{cmd} - Command not found.')
 
 client.run(config['token'])
