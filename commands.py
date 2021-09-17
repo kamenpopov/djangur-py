@@ -48,12 +48,10 @@ async def play(*args, msg, client):
     with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
         search = ytdl.extract_info(f'ytsearch:{link}', False)
 
-        print(search['entries'][0])
+        video = search['entries'][0]
 
-        embed = Embed(title="Gosho", description="SEXY SEX WITH MY COCK AND YOUR BUSSY", color=0x00ffff)
-        embed.set_thumbnail()
+        embed = Embed(title=video['title'], description=video['description'], color=0x00ffff)
+        embed.set_thumbnail(url=video['thumbnail'])
         await msg.channel.send(embed=embed)
 
-
-    ginstance.vc.play(FFmpegPCMAudio(search['entries'][0]['formats'][0]['url']), after=lambda e: print("krai"))
-
+    ginstance.vc.play(FFmpegPCMAudio(video['formats'][0]['url']), after=lambda e: print("krai"))
