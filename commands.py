@@ -136,7 +136,7 @@ async def search(*args, msg, client):
     search_str = ""
     for index, video in enumerate(search_results):
         search_str = search_str + "\n" + str(index + 1) + " - " + video['title']
-        song_search.append(video['title'])
+        song_search.append(video['id'])
     results_embed = Embed(title="Search results for {0}".format(search))
     results_embed.add_field(name="Results:", value="{0}".format(search_str))
     await msg.channel.send(embed=results_embed)
