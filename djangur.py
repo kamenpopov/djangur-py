@@ -1,5 +1,5 @@
 import discord
-from commands import *
+from commands import Commands, Guild_Instance, play_search
 import json
 
 with open('config.json') as f:
@@ -13,11 +13,16 @@ async def on_ready():
 
 @client.event
 async def on_message(msg):
-    if msg.content.isdigit() and getSearching():
-       await playSearch(msg.content, msg)
-    if not msg.content.startswith(config['prefix']):
-        return
     if msg.author == client.user:
+        return
+
+    ginst = Guild_Instance.by_id(msg.guild.id)
+    ginst.tc = msg.channel
+
+    if msg.content.isdigit() and ginst.searching:
+       await play_search(msg.content, msg)
+
+    if not msg.content.startswith(config['prefix']):
         return
 
     no_prefix = msg.content[len(config['prefix']):]

@@ -50,11 +50,21 @@ class Song:
 
 
 class Guild_Instance():
-    def __init__(self, vc=None):
-        self.vc = vc
+    _instances = {}
+
+    @staticmethod
+    def by_id(id):
+        if id not in Guild_Instance._instances:
+            Guild_Instance._instances[id] = Guild_Instance()
+        return Guild_Instance._instances[id]
+
+    def __init__(self):
+        self.vc = None
         self.tc = None
         self.audio_source = None
         self.queue = []
+        self.searching = False
+        self.song_search = []
 
     async def connect(self, channel):
         if channel is None:
@@ -92,64 +102,46 @@ class Guild_Instance():
         self.dequeue()
 
 
-guild_instances = {}
-searching = False
-song_search = []
-#this is utterly fucking retarded
-def getSearching():
-    return searching
-async def playSearch(id, msg):
-    global searching
-    searching = False
-    ginst = guild_instances[msg.guild.id]
-    ginst.tc = msg.channel
+async def play_search(id, msg):
+    ginst = Guild_Instance.by_id(msg.guild.id)
+
+    ginst.searching = False
     await ginst.connect(msg.author.voice.channel)
     id_r = int(id) - 1
-    query = song_search[int(id_r)]
+
+    query = ginst.song_search[int(id_r)]
     print(query)
-    if query.startswith('https:'):
-        song = Song.from_url(query)
-    else:
-        song = Song.from_youtube(query)
+    song = Song.from_youtube(query)
 
     await ginst.enqueue(song)
     if not ginst.vc.is_playing():
         ginst.play_next()
 
-# @Commands.add
 @Commands.add()
 async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
 @Commands.add()
 async def search(*args, msg, client):
-    global guild_instances
-    global searching
-    global song_search
-    song_search = []
-    if msg.guild.id not in guild_instances:
-        guild_instances[msg.guild.id] = Guild_Instance()
-    ginst = guild_instances[msg.guild.id]
+    ginst = Guild_Instance.by_id(msg.guild.id)
+
+    ginst.song_search = []
     search = ' '.join(args)
     with youtube_dl.YoutubeDL() as ytdl:
         search_results = ytdl.extract_info(f"ytsearch10:{search}", download=False)['entries']
     search_str = ""
     for index, video in enumerate(search_results):
         search_str = search_str + "\n" + str(index + 1) + " - " + video['title']
-        song_search.append(video['id'])
+        ginst.song_search.append(video['id'])
     results_embed = Embed(title="Search results for {0}".format(search))
     results_embed.add_field(name="Results:", value="{0}".format(search_str))
     await msg.channel.send(embed=results_embed)
-    searching = True
+    ginst.searching = True
 
 @Commands.add(alias='p')
 async def play(*args, msg, client):
-    global guild_instances
-    if msg.guild.id not in guild_instances:
-        guild_instances[msg.guild.id] = Guild_Instance()
-    ginst = guild_instances[msg.guild.id]
+    ginst = Guild_Instance.by_id(msg.guild.id)
 
-    ginst.tc = msg.channel
     await ginst.connect(msg.author.voice.channel)
 
     if len(args) == 0:
@@ -167,47 +159,22 @@ async def play(*args, msg, client):
             ginst.play_next()
 
 @Commands.add(alias='s')
-async def stop(*args, msg, client):
-    global guild_instances
-    if msg.guild.id not in guild_instances:
-        guild_instances[msg.guild.id] = Guild_Instance()
-    ginst = guild_instances[msg.guild.id]
+async def skip(*args, msg, client):
+    ginst = Guild_Instance.by_id(msg.guild.id)
 
     if ginst.vc.is_playing():
         ginst.vc.stop()
 
 @Commands.add()
 async def pause(*args, msg, client):
-    global guild_instances
-    if msg.guild.id not in guild_instances:
-        guild_instances[msg.guild.id] = Guild_Instance()
-    ginst = guild_instances[msg.guild.id]
+    ginst = Guild_Instance.by_id(msg.guild.id)
 
     if ginst.vc.is_playing():
         ginst.vc.pause()
 
 @Commands.add()
 async def resume(*args, msg, client):
-    global guild_instances
-    if msg.guild.id not in guild_instances:
-        guild_instances[msg.guild.id] = Guild_Instance()
-    ginst = guild_instances[msg.guild.id]
+    ginst = Guild_Instance.by_id(msg.guild.id)
     
     if ginst.vc.is_paused():
         ginst.vc.resume()
-
-
-# ! ne bachka
-# @Commands.add()
-# async def volume(*args, msg, client):
-#     global guild_instances
-#     vol = int(args[0])
-#     if vol > 100 or vol < 0:
-#         await msg.channel.send("Invalid volume value!")
-#     else:
-#         if msg.guild.id not in guild_instances:
-#             guild_instances[msg.guild.id] = Guild_Instance()
-#         ginst = guild_instances[msg.guild.id]
-#         # print(dir(ginst.audio_source))
-#         ginst.audio_source._volume = vol / 100
-#         print(ginst.audio_source.volume)
