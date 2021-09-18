@@ -9,16 +9,12 @@ import youtube_dl
 class Commands():
     command_map = {}
 
-
-def command(alias=None):
-    def wrap(f):
-        print("inside wrap")
-        print(f)
-        print(alias)
-        Commands.command_map[f.__name__] = f
-        if alias != None:
-            Commands.command_map[alias] = f
-    return wrap
+    def add(alias=None):
+        def wrap(f):
+            Commands.command_map[f.__name__] = f
+            if alias != None:
+                Commands.command_map[alias] = f
+        return wrap
 
 
 class Song:
@@ -93,12 +89,12 @@ guild_instances = {}
 
 
 # @Commands.add
-@command()
+@Commands.add()
 async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
 
-@command(alias='p')
+@Commands.add(alias='p')
 async def play(*args, msg, client):
     global guild_instances
     if msg.guild.id not in guild_instances:
@@ -118,7 +114,7 @@ async def play(*args, msg, client):
     if not ginst.vc.is_playing():
         ginst.play_next()
 
-@command(alias='s')
+@Commands.add(alias='s')
 async def stop(*args, msg, client):
     global guild_instances
     if msg.guild.id not in guild_instances:
