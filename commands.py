@@ -9,10 +9,16 @@ import youtube_dl
 class Commands():
     command_map = {}
 
-    @staticmethod
-    def add(f):
+
+def command(alias=None):
+    def wrap(f):
+        print("inside wrap")
+        print(f)
+        print(alias)
         Commands.command_map[f.__name__] = f
-        return f
+        if alias != None:
+            Commands.command_map[alias] = f
+    return wrap
 
 
 class Song:
@@ -35,10 +41,7 @@ class Song:
 
     @staticmethod
     def from_url(url):
-        ytdl_options = {
-            #'format': 'bestaudio',
-        }
-        with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+        with youtube_dl.YoutubeDL() as ytdl:
             video = ytdl.extract_info(url, False)
             print(video)
             return Song(
@@ -89,19 +92,21 @@ class Guild_Instance():
 guild_instances = {}
 
 
-@Commands.add
+# @Commands.add
+@command()
 async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
 
-@Commands.add
-async def p(*args, msg, client):
+@command(alias='p')
+async def play(*args, msg, client):
     global guild_instances
     if msg.guild.id not in guild_instances:
         guild_instances[msg.guild.id] = Guild_Instance()
     ginst = guild_instances[msg.guild.id]
 
     ginst.tc = msg.channel
+    await ginst.connect(msg.author.voice.channel)
 
     query = ' '.join(args)
     if query.startswith('https:'):
@@ -109,13 +114,12 @@ async def p(*args, msg, client):
     else:
         song = Song.from_youtube(query)
 
-    await ginst.connect(msg.author.voice.channel)
     await ginst.enqueue(song)
     if not ginst.vc.is_playing():
         ginst.play_next()
 
-@Commands.add
-async def s(*args, msg, client):
+@command(alias='s')
+async def stop(*args, msg, client):
     global guild_instances
     if msg.guild.id not in guild_instances:
         guild_instances[msg.guild.id] = Guild_Instance()
