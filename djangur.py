@@ -1,5 +1,5 @@
 import discord
-from commands import Commands
+from commands import *
 import json
 
 with open('config.json') as f:
@@ -13,6 +13,8 @@ async def on_ready():
 
 @client.event
 async def on_message(msg):
+    if msg.content.isdigit() and getSearching():
+       await playSearch(msg.content, msg)
     if not msg.content.startswith(config['prefix']):
         return
     if msg.author == client.user:
@@ -22,7 +24,7 @@ async def on_message(msg):
     split = no_prefix.split(' ')
     cmd = split[0]
     args = split[1:]
-
+    
     if cmd in Commands.command_map:
         await Commands.command_map[cmd](*args, msg=msg, client=client)
     else:

@@ -5,6 +5,8 @@ from subprocess import run
 import tempfile
 from os import path
 import youtube_dl
+from contextlib import redirect_stdout
+
 
 class Commands():
     command_map = {}
@@ -86,13 +88,54 @@ class Guild_Instance():
 
 
 guild_instances = {}
+searching = False
+song_search = []
+#this is utterly fucking retarded
+def getSearching():
+    return searching
+async def playSearch(id, msg):
+    global searching
+    searching = False
+    ginst = guild_instances[msg.guild.id]
+    ginst.tc = msg.channel
+    await ginst.connect(msg.author.voice.channel)
+    id_r = int(id) - 1
+    query = song_search[int(id_r)]
+    print(query)
+    if query.startswith('https:'):
+        song = Song.from_url(query)
+    else:
+        song = Song.from_youtube(query)
 
+    await ginst.enqueue(song)
+    if not ginst.vc.is_playing():
+        ginst.play_next()
 
 # @Commands.add
 @Commands.add()
 async def ping(*args, msg, client):
     await msg.channel.send('pong')
 
+@Commands.add()
+async def search(*args, msg, client):
+    global guild_instances
+    global searching
+    global song_search
+    song_search = []
+    if msg.guild.id not in guild_instances:
+        guild_instances[msg.guild.id] = Guild_Instance()
+    ginst = guild_instances[msg.guild.id]
+    search = ' '.join(args)
+    with youtube_dl.YoutubeDL() as ytdl:
+        search_results = ytdl.extract_info(f"ytsearch10:{search}", download=False)['entries']
+    search_str = ""
+    for index, video in enumerate(search_results):
+        search_str = search_str + "\n" + str(index + 1) + " - " + video['title']
+        song_search.append(video['title'])
+    results_embed = Embed(title="Search results for {0}".format(search))
+    results_embed.add_field(name="Results:", value="{0}".format(search_str))
+    await msg.channel.send(embed=results_embed)
+    searching = True
 
 @Commands.add(alias='p')
 async def play(*args, msg, client):
