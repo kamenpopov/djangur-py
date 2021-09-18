@@ -42,8 +42,13 @@ class Song:
         with youtube_dl.YoutubeDL() as ytdl:
             video = ytdl.extract_info(url, False)
             print(video)
+            url = None
+            if 'formats' in video:
+                url = video['formats'][0]['url']
+            elif 'url' in video:
+                url = video['url']
             return Song(
-                    video['url'],
+                    url,
                     video['title'] if 'title' in video else None,
                     video['description'] if 'description' in video else None,
                     video['thumbnail'] if 'thumbnail' in video else None)
@@ -102,8 +107,8 @@ class Guild_Instance():
         self.dequeue()
 
 
-async def play_search(id, msg):
-    ginst = Guild_Instance.by_id(msg.guild.id)
+#TODO Figure out a more clever way to do this
+async def play_search(id, msg, client, ginst):
 
     ginst.searching = False
     await ginst.connect(msg.author.voice.channel)
@@ -118,29 +123,27 @@ async def play_search(id, msg):
         ginst.play_next()
 
 @Commands.add()
-async def ping(*args, msg, client):
-    await msg.channel.send('pong')
+async def ping(args, msg, client, ginst):
+    await ginst.tc.send('pong')
 
 @Commands.add()
-async def search(*args, msg, client):
-    ginst = Guild_Instance.by_id(msg.guild.id)
+async def search(args, msg, client, ginst):
 
     ginst.song_search = []
-    search = ' '.join(args)
+    search = args
     with youtube_dl.YoutubeDL() as ytdl:
         search_results = ytdl.extract_info(f"ytsearch10:{search}", download=False)['entries']
     search_str = ""
     for index, video in enumerate(search_results):
-        search_str = search_str + "\n" + str(index + 1) + " - " + video['title']
+        search_str += f"{index + 1} - {video['title']}\n"
         ginst.song_search.append(video['id'])
-    results_embed = Embed(title="Search results for {0}".format(search))
-    results_embed.add_field(name="Results:", value="{0}".format(search_str))
-    await msg.channel.send(embed=results_embed)
+    results_embed = Embed(title=f'Search results for {search}')
+    results_embed.add_field(name='Results:', value=search_str)
+    await ginst.tc.send(embed=results_embed)
     ginst.searching = True
 
 @Commands.add(alias='p')
-async def play(*args, msg, client):
-    ginst = Guild_Instance.by_id(msg.guild.id)
+async def play(args, msg, client, ginst):
 
     await ginst.connect(msg.author.voice.channel)
 
@@ -148,7 +151,7 @@ async def play(*args, msg, client):
         if ginst.vc.is_paused():
             ginst.vc.resume()
     else:
-        query = ' '.join(args)
+        query = args
         if query.startswith('https:'):
             song = Song.from_url(query)
         else:
@@ -159,22 +162,31 @@ async def play(*args, msg, client):
             ginst.play_next()
 
 @Commands.add(alias='s')
-async def skip(*args, msg, client):
-    ginst = Guild_Instance.by_id(msg.guild.id)
+async def skip(args, msg, client, ginst):
 
     if ginst.vc.is_playing():
         ginst.vc.stop()
 
 @Commands.add()
-async def pause(*args, msg, client):
-    ginst = Guild_Instance.by_id(msg.guild.id)
+async def pause(args, msg, client, ginst):
 
     if ginst.vc.is_playing():
         ginst.vc.pause()
 
 @Commands.add()
-async def resume(*args, msg, client):
-    ginst = Guild_Instance.by_id(msg.guild.id)
-    
+async def resume(args, msg, client, ginst):
     if ginst.vc.is_paused():
         ginst.vc.resume()
+
+@Commands.add(alias='q')
+async def queue(args, msg, client, ginst):
+    queue_str = ""
+    if len(ginst.queue) == 0:
+        queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
+        await ginst.tc.send(embed=queue_embed)
+    else:
+        for i in range(len(ginst.queue)):
+            queue_str += f"{i+ 1} - {ginst.queue[0].title}\n"
+        queue_embed = Embed(title='Song queue')
+        queue_embed.add_field(name="Songs:", value=queue_str)
+        await ginst.tc.send(embed=queue_embed)
