@@ -104,15 +104,19 @@ async def play(*args, msg, client):
     ginst.tc = msg.channel
     await ginst.connect(msg.author.voice.channel)
 
-    query = ' '.join(args)
-    if query.startswith('https:'):
-        song = Song.from_url(query)
+    if len(args) == 0:
+        if ginst.vc.is_paused():
+            ginst.vc.resume()
     else:
-        song = Song.from_youtube(query)
+        query = ' '.join(args)
+        if query.startswith('https:'):
+            song = Song.from_url(query)
+        else:
+            song = Song.from_youtube(query)
 
-    await ginst.enqueue(song)
-    if not ginst.vc.is_playing():
-        ginst.play_next()
+        await ginst.enqueue(song)
+        if not ginst.vc.is_playing():
+            ginst.play_next()
 
 @Commands.add(alias='s')
 async def stop(*args, msg, client):
@@ -123,3 +127,23 @@ async def stop(*args, msg, client):
 
     if ginst.vc.is_playing():
         ginst.vc.stop()
+
+@Commands.add()
+async def pause(*args, msg, client):
+    global guild_instances
+    if msg.guild.id not in guild_instances:
+        guild_instances[msg.guild.id] = Guild_Instance()
+    ginst = guild_instances[msg.guild.id]
+
+    if ginst.vc.is_playing():
+        ginst.vc.pause()
+
+@Commands.add()
+async def resume(*args, msg, client):
+    global guild_instances
+    if msg.guild.id not in guild_instances:
+        guild_instances[msg.guild.id] = Guild_Instance()
+    ginst = guild_instances[msg.guild.id]
+    
+    if ginst.vc.is_paused():
+        ginst.vc.resume()
