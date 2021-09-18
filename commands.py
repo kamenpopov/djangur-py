@@ -8,15 +8,51 @@ import youtube_dl
 
 class Commands():
     command_map = {}
+
     @staticmethod
     def add(f):
         Commands.command_map[f.__name__] = f
         return f
 
+
+class Song:
+    def __init__(self, url, title=None, description=None, thumbnail=None):
+        self.url = url
+        self.title = title
+        self.description = description
+        self.thumbnail= thumbnail
+
+    @staticmethod
+    def from_youtube(query):
+        ytdl_options = {
+            'format': 'bestaudio',
+            'prefer_ffmpeg': True,
+        }
+        with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+            search = ytdl.extract_info(f'ytsearch:{query}', False)
+            video = search['entries'][0]
+            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'])
+
+    @staticmethod
+    def from_url(url):
+        ytdl_options = {
+            #'format': 'bestaudio',
+        }
+        with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+            video = ytdl.extract_info(url, False)
+            print(video)
+            return Song(
+                    video['url'],
+                    video['title'] if 'title' in video else None,
+                    video['description'] if 'description' in video else None,
+                    video['thumbnail'] if 'thumbnail' in video else None)
+
+
 class Guild_Instance():
     def __init__(self, vc=None):
         self.vc = vc
-
+        self.tc = None
+        self.queue = []
 
     async def connect(self, channel):
         if channel is None:
@@ -28,6 +64,27 @@ class Guild_Instance():
             await self.vc.disconnect()
             self.vc = await channel.connect()
 
+    async def enqueue(self, song):
+        embed = Embed(title=song.title, description=song.description, color=0x00ffff)
+        if song.thumbnail is not None:
+            embed.set_thumbnail(url=song.thumbnail)
+        await self.tc.send(embed=embed)
+
+        self.queue.append(song)
+
+    def dequeue(self):
+        self.queue.pop(0)
+
+    def play(self, song, after=None):
+        ffmpeg_before_options = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2'
+        self.vc.play(FFmpegPCMAudio(song.url, before_options=ffmpeg_before_options), after=after)
+
+    def play_next(self):
+        if len(self.queue) == 0:
+            return
+        self.play(self.queue[0], after=lambda e: self.play_next())
+        self.dequeue()
+
 
 guild_instances = {}
 
@@ -38,28 +95,31 @@ async def ping(*args, msg, client):
 
 
 @Commands.add
-async def play(*args, msg, client):
+async def p(*args, msg, client):
     global guild_instances
-
     if msg.guild.id not in guild_instances:
         guild_instances[msg.guild.id] = Guild_Instance()
-    ginstance = guild_instances[msg.guild.id]
+    ginst = guild_instances[msg.guild.id]
 
-    await ginstance.connect(msg.author.voice.channel)
+    ginst.tc = msg.channel
 
-    link = ' '.join(args)
+    query = ' '.join(args)
+    if query.startswith('https:'):
+        song = Song.from_url(query)
+    else:
+        song = Song.from_youtube(query)
 
-    ytdl_options = {
-        'format': 'bestaudio'
-    }
+    await ginst.connect(msg.author.voice.channel)
+    await ginst.enqueue(song)
+    if not ginst.vc.is_playing():
+        ginst.play_next()
 
-    with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
-        search = ytdl.extract_info(f'ytsearch:{link}', False)
+@Commands.add
+async def s(*args, msg, client):
+    global guild_instances
+    if msg.guild.id not in guild_instances:
+        guild_instances[msg.guild.id] = Guild_Instance()
+    ginst = guild_instances[msg.guild.id]
 
-        video = search['entries'][0]
-
-        embed = Embed(title=video['title'], description=video['description'], color=0x00ffff)
-        embed.set_thumbnail(url=video['thumbnail'])
-        await msg.channel.send(embed=embed)
-
-    ginstance.vc.play(FFmpegPCMAudio(video['formats'][0]['url']), after=lambda e: print("krai"))
+    if ginst.vc.is_playing():
+        ginst.vc.stop()
