@@ -24,7 +24,7 @@ async def on_message(msg):
     split = no_prefix.split(' ')
     cmd = split[0]
     args = split[1:]
-    
+
     if cmd in Commands.command_map:
         await Commands.command_map[cmd](*args, msg=msg, client=client)
     else:
