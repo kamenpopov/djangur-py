@@ -1,5 +1,5 @@
 import time
-from discord.player import FFmpegPCMAudio
+from discord.player import FFmpegPCMAudio, PCMVolumeTransformer
 from discord import Embed
 from subprocess import run
 import tempfile
@@ -51,6 +51,7 @@ class Guild_Instance():
     def __init__(self, vc=None):
         self.vc = vc
         self.tc = None
+        self.audio_source = None
         self.queue = []
 
     async def connect(self, channel):
@@ -76,7 +77,11 @@ class Guild_Instance():
 
     def play(self, song, after=None):
         ffmpeg_before_options = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2'
-        self.vc.play(FFmpegPCMAudio(song.url, before_options=ffmpeg_before_options), after=after)
+        # self.tc.send(f'Now playing: {song.title}')
+        self.audio_source = FFmpegPCMAudio(song.url, before_options=ffmpeg_before_options)
+
+        self.vc.play(self.audio_source, after=after)
+        self.audio_source = PCMVolumeTransformer(self.audio_source, 1)
 
     def play_next(self):
         if len(self.queue) == 0:
@@ -147,3 +152,19 @@ async def resume(*args, msg, client):
     
     if ginst.vc.is_paused():
         ginst.vc.resume()
+
+
+# ! ne bachka
+# @Commands.add()
+# async def volume(*args, msg, client):
+#     global guild_instances
+#     vol = int(args[0])
+#     if vol > 100 or vol < 0:
+#         await msg.channel.send("Invalid volume value!")
+#     else:
+#         if msg.guild.id not in guild_instances:
+#             guild_instances[msg.guild.id] = Guild_Instance()
+#         ginst = guild_instances[msg.guild.id]
+#         # print(dir(ginst.audio_source))
+#         ginst.audio_source._volume = vol / 100
+#         print(ginst.audio_source.volume)
