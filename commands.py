@@ -70,6 +70,7 @@ class Guild_Instance():
         self.queue = []
         self.searching = False
         self.song_search = []
+        self.now_playing = Song(NotImplemented)
 
     async def connect(self, channel):
         if channel is None:
@@ -101,9 +102,11 @@ class Guild_Instance():
         self.audio_source = PCMVolumeTransformer(self.audio_source, 1)
 
     def play_next(self):
+        self.now_playing = Song(NotImplemented)
         if len(self.queue) == 0:
             return
         self.play(self.queue[0], after=lambda e: self.play_next())
+        self.now_playing = self.queue[0]
         self.dequeue()
 
 
@@ -125,7 +128,14 @@ async def play_search(id, msg, client, ginst):
 @Commands.add()
 async def ping(args, msg, client, ginst):
     await ginst.tc.send('pong')
-
+@Commands.add()
+async def np(args, msg, client, ginst):
+    now_playing_title = ginst.now_playing.title
+    if (ginst.now_playing.title == None):
+        now_playing_title = "nothing"
+    print()
+    embed = Embed(title=f'Now playing: {now_playing_title}')
+    await msg.channel.send(embed=embed)
 @Commands.add()
 async def search(args, msg, client, ginst):
 
@@ -186,7 +196,7 @@ async def queue(args, msg, client, ginst):
         await ginst.tc.send(embed=queue_embed)
     else:
         for i in range(len(ginst.queue)):
-            queue_str += f"{i+ 1} - {ginst.queue[0].title}\n"
+            queue_str += f"{i+ 1} - {ginst.queue[i].title}\n"
         queue_embed = Embed(title='Song queue')
         queue_embed.add_field(name="Songs:", value=queue_str)
         await ginst.tc.send(embed=queue_embed)
