@@ -148,7 +148,8 @@ async def np(args, msg, client, ginst):
     for emoji in range(30):
         if emoji == display_timestamp:
             display_timestamp_emoji += '🔴'
-        display_timestamp_emoji += '▬'
+        else:
+            display_timestamp_emoji += '▬'
     timestamp = str(datetime.timedelta(seconds=timestamp))[:-7]
     video_timestamp = str(datetime.timedelta(seconds=ginst.now_playing.duration))
     embed = Embed(title=f'Now playing: {now_playing_title}')
@@ -208,6 +209,9 @@ async def resume(args, msg, client, ginst):
 @Commands.add(alias='q')
 async def queue(args, msg, client, ginst):
     queue_str = ""
+    if (args == 'clear'):
+        ginst.queue = []
+        return
     if len(ginst.queue) == 0:
         queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
         await ginst.tc.send(embed=queue_embed)
