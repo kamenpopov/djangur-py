@@ -6,6 +6,7 @@ import tempfile
 from os import path
 import youtube_dl
 from contextlib import redirect_stdout
+import datetime
 
 
 class Commands():
@@ -20,11 +21,12 @@ class Commands():
 
 
 class Song:
-    def __init__(self, url, title=None, description=None, thumbnail=None):
+    def __init__(self, url, title=None, description=None, thumbnail=None, duration=None):
         self.url = url
         self.title = title
         self.description = description
         self.thumbnail= thumbnail
+        self.duration = duration
 
     @staticmethod
     def from_youtube(query):
@@ -35,13 +37,12 @@ class Song:
         with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
             search = ytdl.extract_info(f'ytsearch:{query}', False)
             video = search['entries'][0]
-            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'])
+            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'])
 
     @staticmethod
     def from_url(url):
         with youtube_dl.YoutubeDL() as ytdl:
             video = ytdl.extract_info(url, False)
-            print(video)
             url = None
             if 'formats' in video:
                 url = video['formats'][0]['url']
@@ -51,7 +52,8 @@ class Song:
                     url,
                     video['title'] if 'title' in video else None,
                     video['description'] if 'description' in video else None,
-                    video['thumbnail'] if 'thumbnail' in video else None)
+                    video['thumbnail'] if 'thumbnail' in video else None,
+                    video['duration'] if 'duration' in video else None)
 
 
 class Guild_Instance():
@@ -71,6 +73,7 @@ class Guild_Instance():
         self.searching = False
         self.song_search = []
         self.now_playing = Song(NotImplemented)
+        self.time_playing = time.time()
 
     async def connect(self, channel):
         if channel is None:
@@ -107,6 +110,7 @@ class Guild_Instance():
             return
         self.play(self.queue[0], after=lambda e: self.play_next())
         self.now_playing = self.queue[0]
+        self.time_playing = time.time()
         self.dequeue()
 
 
@@ -118,7 +122,6 @@ async def play_search(id, msg, client, ginst):
     id_r = int(id) - 1
 
     query = ginst.song_search[int(id_r)]
-    print(query)
     song = Song.from_youtube(query)
 
     await ginst.enqueue(song)
@@ -131,10 +134,25 @@ async def ping(args, msg, client, ginst):
 @Commands.add()
 async def np(args, msg, client, ginst):
     now_playing_title = ginst.now_playing.title
-    if (ginst.now_playing.title == None):
-        now_playing_title = "nothing"
-    print()
+    if (now_playing_title == None):
+        embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
+        await msg.channel.send(embed=embed);
+        return
+    if (ginst.now_playing.duration == None):
+        embed = Embed(title=f'Now playing: {now_playing_title}')
+        await msg.channel.send(embed=embed);
+        return
+    timestamp = (time.time() - ginst.time_playing)
+    display_timestamp = round((timestamp / ginst.now_playing.duration) * 30)
+    display_timestamp_emoji = ''
+    for emoji in range(30):
+        if emoji == display_timestamp:
+            display_timestamp_emoji += '🔴'
+        display_timestamp_emoji += '▬'
+    timestamp = str(datetime.timedelta(seconds=timestamp))[:-7]
+    video_timestamp = str(datetime.timedelta(seconds=ginst.now_playing.duration))
     embed = Embed(title=f'Now playing: {now_playing_title}')
+    embed.add_field(name=f'{display_timestamp_emoji}', value=f'{timestamp}/{video_timestamp}')
     await msg.channel.send(embed=embed)
 @Commands.add()
 async def search(args, msg, client, ginst):
@@ -166,7 +184,6 @@ async def play(args, msg, client, ginst):
             song = Song.from_url(query)
         else:
             song = Song.from_youtube(query)
-
         await ginst.enqueue(song)
         if not ginst.vc.is_playing():
             ginst.play_next()
