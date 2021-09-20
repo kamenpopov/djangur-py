@@ -28,5 +28,5 @@ deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   script:
     - echo "Deploying application..."
-    - python3 djangur/djangur.py
+    - python3 ./djangur.py
     - echo "Application successfully deployed."
