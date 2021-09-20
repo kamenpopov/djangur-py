@@ -21,6 +21,7 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: pull
   script:
     - echo "Pulling..."
+    - pwd
     - git pull
     - echo "Pulling complete."
 
