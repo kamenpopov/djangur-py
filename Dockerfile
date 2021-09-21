@@ -9,4 +9,4 @@ WORKDIR ~/djangur
 COPY . ~/djangur
 
 # For some other command
-# CMD ["python", "djangur.py"]
+CMD ["python", "djangur.py"]
