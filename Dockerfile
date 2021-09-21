@@ -7,10 +7,11 @@ WORKDIR /usr/local/djangur
 # RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /usr/local/djangur
-COPY /usr/local/config.json /usr/local/djangur
+# COPY /usr/local/config.json /usr/local/djangur
 # CMD ["pwd"]
 # CMD ["ls"]
 
+CMD cp /usr/local/config.json /usr/local/djangur/config.json
 CMD ["djangur.py"]
 
 RUN pip3 install -r requirements.txt
