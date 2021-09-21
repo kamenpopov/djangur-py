@@ -19,10 +19,6 @@ COPY . /usr/local/djangur
 
 RUN pip3 install -r requirements.txt
 
-RUN touch config.json
-RUN touch /usr/local/config.json
-
-
 CMD ["djangur.py"]
 
 ENTRYPOINT ["python3"]
