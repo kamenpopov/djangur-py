@@ -1,0 +1,3 @@
+pynacl
+youtube-dl
+discord
