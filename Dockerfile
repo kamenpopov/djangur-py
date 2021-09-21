@@ -12,9 +12,12 @@ COPY . /usr/local/djangur
 # CMD ["ls"]
 
 CMD cp /usr/local/config.json /usr/local/djangur/config.json
-CMD ["djangur.py"]
+
+CMD ls /usr/local/djangur
 
 RUN pip3 install -r requirements.txt
+
+CMD ["djangur.py"]
 
 ENTRYPOINT ["python3"]
 
