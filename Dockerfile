@@ -11,6 +11,8 @@ COPY . /usr/local/djangur
 # CMD ["pwd"]
 # CMD ["ls"]
 
+CMD touch /usr/local/config.json
+
 # CMD cp /usr/local/config.json /usr/local/djangur/config.json
 
 RUN pip3 install -r requirements.txt
