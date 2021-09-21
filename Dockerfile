@@ -19,6 +19,8 @@ COPY . /usr/local/djangur
 
 RUN pip3 install -r requirements.txt
 
+RUN mkdir /usr/local/config
+
 CMD ["djangur.py"]
 
 ENTRYPOINT ["python3"]
