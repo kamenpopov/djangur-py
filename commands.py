@@ -21,12 +21,13 @@ class Commands():
 
 
 class Song:
-    def __init__(self, url, title=None, description=None, thumbnail=None, duration=None):
+    def __init__(self, url, title=None, description=None, thumbnail=None, duration=None, v_id=None):
         self.url = url
         self.title = title
         self.description = description
         self.thumbnail= thumbnail
         self.duration = duration
+        self.v_id = v_id
 
     @staticmethod
     def from_youtube(query):
@@ -37,7 +38,7 @@ class Song:
         with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
             search = ytdl.extract_info(f'ytsearch:{query}', False)
             video = search['entries'][0]
-            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'])
+            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'], video['id'])
 
     @staticmethod
     def from_url(url):
@@ -53,7 +54,8 @@ class Song:
                     video['title'] if 'title' in video else None,
                     video['description'] if 'description' in video else None,
                     video['thumbnail'] if 'thumbnail' in video else None,
-                    video['duration'] if 'duration' in video else None)
+                    video['duration'] if 'duration' in video else None,
+                    video['id'] if 'id' in video else None)
 
 
 class Guild_Instance():
@@ -86,7 +88,11 @@ class Guild_Instance():
             self.vc = await channel.connect()
 
     async def enqueue(self, song):
-        embed = Embed(title=song.title, description=song.description, color=0x00ffff)
+        url = ''
+        if song.v_id != None and song.duration != None:
+            url = f'https://www.youtube.com/watch?v={song.v_id}'
+
+        embed = Embed(title=song.title, description=song.description, url=f'{url}', color=0x00ffff)
         if song.thumbnail is not None:
             embed.set_thumbnail(url=song.thumbnail)
         await self.tc.send(embed=embed)
@@ -152,8 +158,12 @@ async def np(args, msg, client, ginst):
             display_timestamp_emoji += '▬'
     timestamp = str(datetime.timedelta(seconds=timestamp))[:-7]
     video_timestamp = str(datetime.timedelta(seconds=ginst.now_playing.duration))
-    embed = Embed(title=f'Now playing: {now_playing_title}')
-    embed.add_field(name=f'{display_timestamp_emoji}', value=f'{timestamp}/{video_timestamp}')
+    url = ''
+    if ginst.now_playing.v_id != None:
+        url = f'https://www.youtube.com/watch?v={ginst.now_playing.v_id}'
+    embed = Embed(title=f'{now_playing_title}', url=url)
+    embed.add_field(name=f'```{display_timestamp_emoji}\n```', value=f'```{timestamp}/{video_timestamp}```')
+    embed.set_thumbnail(url=ginst.now_playing.thumbnail)
     await msg.channel.send(embed=embed)
 @Commands.add()
 async def search(args, msg, client, ginst):
