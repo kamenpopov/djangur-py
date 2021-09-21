@@ -7,7 +7,7 @@ WORKDIR /usr/local/djangur
 # RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /usr/local/djangur
-
+COPY /usr/local/config.json /usr/local/djangur
 # CMD ["pwd"]
 # CMD ["ls"]
 
