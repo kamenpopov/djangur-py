@@ -2,6 +2,9 @@ import discord
 from commands import Commands, Guild_Instance, play_search
 import json
 
+from os import listdir
+print(listdir())
+
 with open('config.json') as f:
     config = json.load(f)
 
