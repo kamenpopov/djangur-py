@@ -6,7 +6,7 @@ import os
 print(os.listdir())
 print(os.getcwd())
 
-print([os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser("/djangur")) for f in fn])
+print([os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser("/djangur/config")) for f in fn])
 
 
 with open('config/config.json') as f:
