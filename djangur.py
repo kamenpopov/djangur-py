@@ -2,7 +2,7 @@ import discord
 from commands import Commands, Guild_Instance, play_search
 import json
 
-with open('config/config.json') as f:
+with open('config.json') as f:
     config = json.load(f)
 
 client = discord.Client()
