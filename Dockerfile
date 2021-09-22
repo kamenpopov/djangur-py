@@ -3,12 +3,12 @@
 # This file is a template, and might need editing before it works on your project.
 FROM python:3.6
 
-WORKDIR /usr/local/djangur
+WORKDIR /djangur
 
 # COPY requirements.txt ~/djangur
 # RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /usr/local/djangur
+COPY . /djangur
 # COPY /usr/local/config.json /usr/local/djangur
 # CMD ["pwd"]
 # CMD ["ls"]
@@ -19,7 +19,7 @@ COPY . /usr/local/djangur
 
 RUN pip3 install -r requirements.txt
 
-RUN mkdir /usr/local/config
+# RUN mkdir /usr/local/config
 
 CMD ["djangur.py"]
 
