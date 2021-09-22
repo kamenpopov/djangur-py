@@ -12,7 +12,7 @@ COPY . /djangur
 # COPY /usr/local/config.json /usr/local/djangur
 # CMD ["pwd"]
 # CMD ["ls"]
-
+RUN touch /djangur/config.json 
 # CMD touch /usr/local/config.json
 
 # CMD cp /usr/local/config.json /usr/local/djangur/config.json
