@@ -1,10 +1,10 @@
 import discord
 from commands import Commands, Guild_Instance, play_search
 import json
-
-from os import listdir, getcwd
-print(listdir())
-print(getcwd())
+import os
+# from os import listdir, getcwd
+print(os.listdir())
+print(os.getcwd())
 
 print([os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser("~/files")) for f in fn])
 
