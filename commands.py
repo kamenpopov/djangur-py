@@ -231,3 +231,10 @@ async def queue(args, msg, client, ginst):
         queue_embed = Embed(title='Song queue')
         queue_embed.add_field(name="Songs:", value=queue_str)
         await ginst.tc.send(embed=queue_embed)
+
+@Commands.add()
+async def leave(args, msg, client, ginst):
+    await ginst.vc.disconnect()
+    ginst.vc = None
+    ginst.queue = []
+    ginst.time_playing = time.time()
