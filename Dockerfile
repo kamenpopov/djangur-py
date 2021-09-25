@@ -17,6 +17,8 @@ COPY . /djangur
 
 # CMD cp /usr/local/config.json /usr/local/djangur/config.json
 
+ADD /usr/local/config /djangur
+
 RUN pip3 install -r requirements.txt
 
 # RUN mkdir /usr/local/config

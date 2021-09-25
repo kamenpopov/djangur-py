@@ -29,5 +29,6 @@ deploy-job:      # This job runs in the deploy stage.
     - pwd
     - echo "Deploying application..."
     - docker build . -t djangur
-    - docker run --rm -v /usr/local/config:/djangur/config --name djangur djangur 
+    - docker run --rm -input --name djangur djangur --input /config
+
     - echo "Application successfully deployed."
