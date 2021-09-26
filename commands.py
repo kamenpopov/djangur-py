@@ -273,3 +273,17 @@ async def loop(args, msg, client, ginst):
     elif ginst.loop == 2:
         ginst.loop = 0
         await msg.channel.send("❌ Disabled looping!")
+
+@Commands.add(alias='r')
+async def remove(args, msg, client, ginst):
+    if len(ginst.queue) == 0:
+        queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
+        await msg.channel.send(embed=queue_embed)
+        return
+    args = int(args)
+    if args > len(ginst.queue) or args <= 0:
+        await msg.channel.send("Invalid remove index!")
+    else: 
+        song = ginst.queue[args-1]   
+        ginst.queue.pop(args-1)
+        await msg.channel.send(f"❎ Removed {song.title}!")
