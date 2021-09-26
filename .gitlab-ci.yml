@@ -10,7 +10,7 @@ stages:          # List of stages for jobs, and their order of execution
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  
-  image: ruby:latest# It only runs when *both* jobs in the test stage complete successfully.
+  image: ruby:latest
   script:
     - echo "Deploying application..."
     - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY
