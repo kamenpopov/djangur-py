@@ -2,3 +2,4 @@ pynacl
 youtube-dl
 discord
 python-dotenv
+pymongo
