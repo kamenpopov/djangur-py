@@ -2,15 +2,20 @@ import discord
 from commands import Commands, Guild_Instance, play_search
 import json
 import os
-# from os import listdir, getcwd
-print(os.listdir())
-print(os.getcwd())
-
-print([os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser("/djangur/config")) for f in fn])
+#from pymongo import MongoClient
+#import pymongo
 
 
-with open('config/config.json') as f:
-    config = json.load(f)
+#with open('config.json') as f:
+#    config = json.load(f)
+
+#CONNECTION_STRING = f"mongodb+srv://{config['mongo_user']}:{config['mongo_password']}@djangur.erogd.mongodb.net/djangur?retryWrites=true&w=majority"
+
+#db_client = MongoClient(CONNECTION_STRING)
+
+#print(db_client)
+
+
 
 client = discord.Client()
 
@@ -29,10 +34,10 @@ async def on_message(msg):
     if msg.content.isdigit() and ginst.searching:
        await play_search(msg.content, msg=msg, client=client, ginst=ginst)
 
-    if not msg.content.startswith(config['prefix']):
+    if not msg.content.startswith(os.environ['prefix']):
         return
 
-    no_prefix = msg.content[len(config['prefix']):]
+    no_prefix = msg.content[len(os.environ['prefix']):]
     split = no_prefix.split(' ', 1)
     cmd = split[0]
     args = split[1] if (len(split) == 2) else ''
@@ -42,4 +47,5 @@ async def on_message(msg):
     else:
         await msg.channel.send(f'{cmd}: Command not found.')
 
-client.run(config['token'])
+#client.run(config['token'])
+client.run(os.environ['token'])
