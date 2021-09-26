@@ -156,11 +156,11 @@ async def np(args, msg, client, ginst):
     now_playing_title = ginst.now_playing.title
     if (now_playing_title == None):
         embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
-        await msg.channel.send(embed=embed);
+        await ginst.tc.send(embed=embed);
         return
     if (ginst.now_playing.duration == None):
         embed = Embed(title=f'Now playing: {now_playing_title}')
-        await msg.channel.send(embed=embed);
+        await ginst.tc.send(embed=embed);
         return
     timestamp = (time.time() - ginst.time_playing)
     display_timestamp = round((timestamp / ginst.now_playing.duration) * 30)
@@ -178,7 +178,7 @@ async def np(args, msg, client, ginst):
     embed = Embed(title=f'{now_playing_title}', url=url)
     embed.add_field(name=f'```{display_timestamp_emoji}\n```', value=f'```{timestamp}/{video_timestamp}```')
     embed.set_thumbnail(url=ginst.now_playing.thumbnail)
-    await msg.channel.send(embed=embed)
+    await ginst.tc.send(embed=embed)
 @Commands.add()
 async def search(args, msg, client, ginst):
 
@@ -230,11 +230,17 @@ async def resume(args, msg, client, ginst):
     if ginst.vc.is_paused():
         ginst.vc.resume()
 
+@Commands.add()
+async def clear(args, msg, client, ginst):
+    ginst.queue = []
+    await ginst.tc.send("Cleared queue!")
+
 @Commands.add(alias='q')
 async def queue(args, msg, client, ginst):
     queue_str = ""
     if (args == 'clear'):
         ginst.queue = []
+        await ginst.tc.send("Cleared queue!")
         return
     if len(ginst.queue) == 0:
         queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
@@ -263,27 +269,27 @@ async def stats(args, msg, client, ginst):
 
 @Commands.add()
 async def loop(args, msg, client, ginst):
-    # 0 -> no loop; 1 -> loop current; 2 -> loop playlist; 
+    # 0 -> no loop; 1 -> loop current; 2 -> loop queue; 
     if ginst.loop == 0:
         ginst.loop = 1
-        await msg.channel.send("🔂 Looping current track!")
+        await ginst.tc.send("🔂 Looping current track!")
     elif ginst.loop == 1:
         ginst.loop = 2
-        await msg.channel.send("🔁 Looping current queue!")
+        await ginst.tc.send("🔁 Looping current queue!")
     elif ginst.loop == 2:
         ginst.loop = 0
-        await msg.channel.send("❌ Disabled looping!")
+        await ginst.tc.send("❌ Disabled looping!")
 
 @Commands.add(alias='r')
 async def remove(args, msg, client, ginst):
     if len(ginst.queue) == 0:
         queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
-        await msg.channel.send(embed=queue_embed)
+        await ginst.tc.send(embed=queue_embed)
         return
     args = int(args)
     if args > len(ginst.queue) or args <= 0:
-        await msg.channel.send("Invalid remove index!")
+        await ginst.tc.send("Invalid remove index!")
     else: 
         song = ginst.queue[args-1]   
         ginst.queue.pop(args-1)
-        await msg.channel.send(f"❎ Removed {song.title}!")
+        await ginst.tc.send(f"❎ Removed {song.title}!")
