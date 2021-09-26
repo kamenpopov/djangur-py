@@ -1,10 +1,16 @@
 image: python:latest
 
+before_script:
+    - apt-get update -qy
+    - apt-get install -y ruby-dev
+    - gem install dpl
+
 stages:          # List of stages for jobs, and their order of execution
   - deploy
 
 deploy-job:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  stage: deploy  
+  image: ruby:latest# It only runs when *both* jobs in the test stage complete successfully.
   script:
     - echo "Deploying application..."
     - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY
