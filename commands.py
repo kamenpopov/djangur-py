@@ -126,7 +126,7 @@ class Guild_Instance():
         self.dequeue()
 
     def db_update(self, song):
-        print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'requested_by.total_plays': 1}}, upsert=True).raw_result)
+        print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
 
 
 #TODO Figure out a more clever way to do this
@@ -247,3 +247,11 @@ async def leave(args, msg, client, ginst):
     ginst.vc = None
     ginst.queue = []
     ginst.time_playing = time.time()
+
+@Commands.add()
+async def stats(args, msg, client, ginst):
+    most_played = ginst.db.find_one(sort=[('total_plays', -1)])
+    embed = Embed(title="Most Played Song")
+    embed.add_field(name="Title: ", value=most_played['_id'], inline=False)
+    embed.add_field(name="Count: ", value=most_played['total_plays'], inline=False)
+    await ginst.tc.send(embed=embed)
