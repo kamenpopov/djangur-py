@@ -1,21 +1,15 @@
 import discord
 from commands import Commands, Guild_Instance, play_search
-import json
 import os
-#from pymongo import MongoClient
-#import pymongo
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
+load_dotenv()
 
-#with open('config.json') as f:
-#    config = json.load(f)
+CONNECTION_STRING = f"mongodb+srv://{os.environ['mongo_user']}:{os.environ['mongo_pass']}@djangur.erogd.mongodb.net/djangur?retryWrites=true&w=majority"
 
-#CONNECTION_STRING = f"mongodb+srv://{config['mongo_user']}:{config['mongo_password']}@djangur.erogd.mongodb.net/djangur?retryWrites=true&w=majority"
-
-#db_client = MongoClient(CONNECTION_STRING)
-
-#print(db_client)
-
-
+db_client = MongoClient(CONNECTION_STRING)
+db = db_client['djangur']
 
 client = discord.Client()
 
@@ -30,6 +24,8 @@ async def on_message(msg):
 
     ginst = Guild_Instance.by_id(msg.guild.id)
     ginst.tc = msg.channel
+
+    ginst.db = db[str(msg.guild.id)]
 
     if msg.content.isdigit() and ginst.searching:
        await play_search(msg.content, msg=msg, client=client, ginst=ginst)
@@ -47,5 +43,4 @@ async def on_message(msg):
     else:
         await msg.channel.send(f'{cmd}: Command not found.')
 
-#client.run(config['token'])
 client.run(os.environ['token'])

@@ -4,6 +4,7 @@ from discord import Embed
 from subprocess import run
 import tempfile
 from os import path
+from pymongo.collection import Collection
 import youtube_dl
 from contextlib import redirect_stdout
 import datetime
@@ -21,16 +22,17 @@ class Commands():
 
 
 class Song:
-    def __init__(self, url, title=None, description=None, thumbnail=None, duration=None, v_id=None):
+    def __init__(self, url, title=None, description=None, thumbnail=None, duration=None, v_id=None, played_by=None):
         self.url = url
         self.title = title
         self.description = description
         self.thumbnail= thumbnail
         self.duration = duration
         self.v_id = v_id
+        self.played_by = played_by
 
     @staticmethod
-    def from_youtube(query):
+    def from_youtube(query, played_by):
         ytdl_options = {
             'format': 'bestaudio',
             'prefer_ffmpeg': True,
@@ -38,10 +40,10 @@ class Song:
         with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
             search = ytdl.extract_info(f'ytsearch:{query}', False)
             video = search['entries'][0]
-            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'], video['id'])
+            return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'], video['id'], played_by)
 
     @staticmethod
-    def from_url(url):
+    def from_url(url, played_by):
         with youtube_dl.YoutubeDL() as ytdl:
             video = ytdl.extract_info(url, False)
             url = None
@@ -55,7 +57,8 @@ class Song:
                     video['description'] if 'description' in video else None,
                     video['thumbnail'] if 'thumbnail' in video else None,
                     video['duration'] if 'duration' in video else None,
-                    video['id'] if 'id' in video else None)
+                    video['id'] if 'id' in video else None,
+                    played_by)
 
 
 class Guild_Instance():
@@ -70,6 +73,7 @@ class Guild_Instance():
     def __init__(self):
         self.vc = None
         self.tc = None
+        self.db = Collection
         self.audio_source = None
         self.queue = []
         self.searching = False
@@ -110,6 +114,8 @@ class Guild_Instance():
         self.vc.play(self.audio_source, after=after)
         self.audio_source = PCMVolumeTransformer(self.audio_source, 1)
 
+        self.db_update(song)
+
     def play_next(self):
         self.now_playing = Song(NotImplemented)
         if len(self.queue) == 0:
@@ -118,6 +124,9 @@ class Guild_Instance():
         self.now_playing = self.queue[0]
         self.time_playing = time.time()
         self.dequeue()
+
+    def db_update(self, song):
+        print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
 
 
 #TODO Figure out a more clever way to do this
@@ -128,7 +137,7 @@ async def play_search(id, msg, client, ginst):
     id_r = int(id) - 1
 
     query = ginst.song_search[int(id_r)]
-    song = Song.from_youtube(query)
+    song = Song.from_youtube(query, msg.author.name)
 
     await ginst.enqueue(song)
     if not ginst.vc.is_playing():
@@ -192,9 +201,9 @@ async def play(args, msg, client, ginst):
     else:
         query = args
         if query.startswith('https:'):
-            song = Song.from_url(query)
+            song = Song.from_url(query, msg.author.name)
         else:
-            song = Song.from_youtube(query)
+            song = Song.from_youtube(query, msg.author.name)
         await ginst.enqueue(song)
         if not ginst.vc.is_playing():
             ginst.play_next()
@@ -238,3 +247,11 @@ async def leave(args, msg, client, ginst):
     ginst.vc = None
     ginst.queue = []
     ginst.time_playing = time.time()
+
+@Commands.add()
+async def stats(args, msg, client, ginst):
+    most_played = ginst.db.find_one(sort=[('total_plays', -1)])
+    embed = Embed(title="Most Played Song")
+    embed.add_field(name="Title: ", value=most_played['_id'], inline=False)
+    embed.add_field(name="Count: ", value=most_played['total_plays'], inline=False)
+    await ginst.tc.send(embed=embed)
