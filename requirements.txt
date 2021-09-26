@@ -3,3 +3,4 @@ youtube-dl
 discord
 python-dotenv
 pymongo
+dnspython
