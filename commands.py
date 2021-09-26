@@ -73,13 +73,14 @@ class Guild_Instance():
     def __init__(self):
         self.vc = None
         self.tc = None
-        self.db = Collection
-        self.audio_source = None
+        self.db = None
+        self.loop = 0
         self.queue = []
-        self.searching = False
         self.song_search = []
-        self.now_playing = Song(NotImplemented)
+        self.searching = False
+        self.audio_source = None
         self.time_playing = time.time()
+        self.now_playing = None
 
     async def connect(self, channel):
         if channel is None:
@@ -114,20 +115,24 @@ class Guild_Instance():
         self.vc.play(self.audio_source, after=after)
         self.audio_source = PCMVolumeTransformer(self.audio_source, 1)
 
+        self.now_playing = song
+
         self.db_update(song)
 
     def play_next(self):
-        self.now_playing = Song(NotImplemented)
-        if len(self.queue) == 0:
-            return
-        self.play(self.queue[0], after=lambda e: self.play_next())
-        self.now_playing = self.queue[0]
-        self.time_playing = time.time()
-        self.dequeue()
+        if self.loop == 0:
+            self.now_playing = None
+            if len(self.queue) == 0:
+                return
+            self.play(self.queue[0], after=lambda e: self.play_next())
+            self.now_playing = self.queue[0]
+            self.time_playing = time.time()
+            self.dequeue()
+        elif self.loop == 1:
+            self.play(self.now_playing, after=lambda e: self.play_next())
 
     def db_update(self, song):
         print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
-
 
 #TODO Figure out a more clever way to do this
 async def play_search(id, msg, client, ginst):
@@ -255,3 +260,16 @@ async def stats(args, msg, client, ginst):
     embed.add_field(name="Title: ", value=most_played['_id'], inline=False)
     embed.add_field(name="Count: ", value=most_played['total_plays'], inline=False)
     await ginst.tc.send(embed=embed)
+
+@Commands.add()
+async def loop(args, msg, client, ginst):
+    # 0 -> no loop; 1 -> loop current; 2 -> loop playlist; 
+    if ginst.loop == 0:
+        ginst.loop = 1
+        await msg.channel.send("🔂 Looping current track!")
+    elif ginst.loop == 1:
+        ginst.loop = 2
+        await msg.channel.send("🔁 Looping current queue!")
+    elif ginst.loop == 2:
+        ginst.loop = 0
+        await msg.channel.send("❌ Disabled looping!")
