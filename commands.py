@@ -81,6 +81,7 @@ class Guild_Instance():
         self.audio_source = None
         self.time_playing = time.time()
         self.now_playing = None
+        self.timestamp = 0
 
     async def connect(self, channel):
         if channel is None:
@@ -96,19 +97,20 @@ class Guild_Instance():
         url = ''
         if song.v_id != None and song.duration != None:
             url = f'https://www.youtube.com/watch?v={song.v_id}'
-
-        embed = Embed(title=song.title, description=song.description, url=f'{url}', color=0x00ffff)
+        desc = (song.description[:500] + '...') if len(song.description) > 500 else song.description
+        embed = Embed(title=song.title, description=desc, url=f'{url}', color=0x00ffff)
+        dur = str(datetime.timedelta(seconds=song.duration))
+        embed.set_footer(text=f'Duration: {dur}')
         if song.thumbnail is not None:
             embed.set_thumbnail(url=song.thumbnail)
         await self.tc.send(embed=embed)
-
         self.queue.append(song)
 
     def dequeue(self):
         self.queue.pop(0)
 
     def play(self, song, after=None):
-        ffmpeg_before_options = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2'
+        ffmpeg_before_options = f'-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2 -ss {self.timestamp}'
         # self.tc.send(f'Now playing: {song.title}')
         self.audio_source = FFmpegPCMAudio(song.url, before_options=ffmpeg_before_options)
 
@@ -116,8 +118,10 @@ class Guild_Instance():
         self.audio_source = PCMVolumeTransformer(self.audio_source, 1)
 
         self.now_playing = song
-
-        self.db_update(song)
+        if self.timestamp == 0:
+            self.db_update(song)
+            self.time_playing = time.time()
+        
 
     def play_next(self):
         if self.loop == 0:
@@ -126,10 +130,12 @@ class Guild_Instance():
                 return
             self.play(self.queue[0], after=lambda e: self.play_next())
             self.now_playing = self.queue[0]
-            self.time_playing = time.time()
             self.dequeue()
         elif self.loop == 1:
             self.play(self.now_playing, after=lambda e: self.play_next())
+        if self.timestamp != 0:
+            self.dequeue()
+        self.timestamp = 0
 
     def db_update(self, song):
         print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
@@ -179,6 +185,38 @@ async def np(args, msg, client, ginst):
     embed.add_field(name=f'```{display_timestamp_emoji}\n```', value=f'```{timestamp}/{video_timestamp}```')
     embed.set_thumbnail(url=ginst.now_playing.thumbnail)
     await ginst.tc.send(embed=embed)
+@Commands.add()
+async def seek(args, msg, client, ginst):
+    if ginst.now_playing == None:
+        embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
+        await ginst.tc.send(embed=embed);
+        return
+    if args.count(':') > 3:
+        embed = Embed(title='Invalid argument!')
+        await ginst.tc.send(embed=embed);
+        return
+    timestamp = args.split(':')
+    if 2 > len(timestamp):
+        timestamp.insert(0, 0)
+    if 3 > len(timestamp):
+        timestamp.insert(0, 0)
+    def switch(x):
+        switcher = {
+            3: int(timestamp[0]) * 1200 + (int(timestamp[1])) * 60 + int(timestamp[2]),
+            2: int(timestamp[0]) * 60 + int(timestamp[1]),
+            1: int(timestamp[0]),
+        }
+        return switcher.get(x, 0)
+    timestamp_seconds = switch(len(timestamp))
+    if timestamp_seconds < 0 or timestamp_seconds > ginst.now_playing.duration:
+        embed = Embed(title='Invalid timestamp!')
+        await ginst.tc.send(embed=embed);
+        return
+    ginst.timestamp = timestamp_seconds
+    ginst.time_playing = time.time() - timestamp_seconds
+    ginst.queue.insert(0, ginst.now_playing)
+    ginst.vc.stop()
+    
 @Commands.add()
 async def search(args, msg, client, ginst):
 
