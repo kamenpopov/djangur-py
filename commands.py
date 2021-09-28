@@ -100,8 +100,13 @@ class Guild_Instance():
         desc = (song.description[:500] + '...') if len(song.description) > 500 else song.description
         embed = Embed(title=song.title, description=desc, url=f'{url}', color=0x00ffff)
         dur = str(datetime.timedelta(seconds=song.duration))
-        play_count = self.db.find_one({'_id': song.title})['total_plays']
-        embed.set_footer(text=f'Duration: {dur}\nThis song has been played {play_count} times before!') 
+        play_count = self.db.find_one({'_id': song.title})
+        if play_count is not None:
+            play_count = play_count['total_plays']
+            msg = f'This song has been played {play_count} times before!'
+        else:
+            msg = 'You are playing this for the first time!'
+        embed.set_footer(text=f'Duration: {dur}\n{msg}') 
         if song.thumbnail is not None:
             embed.set_thumbnail(url=song.thumbnail)
         await self.tc.send(embed=embed)
@@ -136,6 +141,8 @@ class Guild_Instance():
             self.play(self.now_playing, after=lambda e: self.play_next())
             if self.timestamp != 0:
                 self.dequeue()
+        elif self.loop == 2:
+            self.play(self.queue[1], after=lambda e: self.play_next())
         self.timestamp = 0
 
     def db_update(self, song):
