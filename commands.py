@@ -100,7 +100,8 @@ class Guild_Instance():
         desc = (song.description[:500] + '...') if len(song.description) > 500 else song.description
         embed = Embed(title=song.title, description=desc, url=f'{url}', color=0x00ffff)
         dur = str(datetime.timedelta(seconds=song.duration))
-        embed.set_footer(text=f'Duration: {dur}')
+        play_count = self.db.find_one({'_id': song.title})['total_plays']
+        embed.set_footer(text=f'Duration: {dur}\nThis song has been played {play_count} times before!') 
         if song.thumbnail is not None:
             embed.set_thumbnail(url=song.thumbnail)
         await self.tc.send(embed=embed)
@@ -160,7 +161,7 @@ async def ping(args, msg, client, ginst):
 @Commands.add()
 async def np(args, msg, client, ginst):
     now_playing_title = ginst.now_playing.title
-    if (now_playing_title == None):
+    if (ginst.now_playing == None):
         embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
         await ginst.tc.send(embed=embed);
         return
