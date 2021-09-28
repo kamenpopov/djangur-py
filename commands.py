@@ -133,8 +133,8 @@ class Guild_Instance():
             self.dequeue()
         elif self.loop == 1:
             self.play(self.now_playing, after=lambda e: self.play_next())
-        if self.timestamp != 0:
-            self.dequeue()
+            if self.timestamp != 0:
+                self.dequeue()
         self.timestamp = 0
 
     def db_update(self, song):
@@ -216,6 +216,7 @@ async def seek(args, msg, client, ginst):
     ginst.time_playing = time.time() - timestamp_seconds
     ginst.queue.insert(0, ginst.now_playing)
     ginst.vc.stop()
+    await ginst.tc.send(f'⏩Set position to `{args}`')
     
 @Commands.add()
 async def search(args, msg, client, ginst):
