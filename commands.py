@@ -159,7 +159,6 @@ class Guild_Instance():
         self.timestamp = 0
 
     def db_update(self, song):
-        # print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
         self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True)
 
 
