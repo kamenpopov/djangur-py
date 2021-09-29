@@ -39,6 +39,7 @@ class Song:
             'prefer_ffmpeg': True,
         }
         with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+            ytdl.cache.remove()
             search = ytdl.extract_info(f'ytsearch:{query}', False)
             video = search['entries'][0]
             return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'], video['id'], played_by)
@@ -300,7 +301,6 @@ async def play(args, msg, client, ginst):
 
 @Commands.add(alias='s', description='Skips current song')
 async def skip(args, msg, client, ginst):
-
     if ginst.vc.is_playing():
         ginst.vc.stop()
 
