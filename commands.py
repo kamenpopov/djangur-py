@@ -1,12 +1,7 @@
 import time
 from discord.player import FFmpegPCMAudio, PCMVolumeTransformer
 from discord import Embed
-from subprocess import run
-import tempfile
-from os import path
-from pymongo.collection import Collection
 import youtube_dl
-from contextlib import redirect_stdout
 import datetime
 
 
@@ -76,6 +71,7 @@ class Guild_Instance():
         self.db = None
         self.loop = 0
         self.queue = []
+        self.loop_index = 0
         self.song_search = []
         self.searching = False
         self.audio_source = None
@@ -128,25 +124,44 @@ class Guild_Instance():
             self.db_update(song)
             self.time_playing = time.time()
         
+    def after_play(self):
+        if self.loop == 2 and self.loop_index <= len(self.queue)-1:
+            self.loop_index += 1
+            self.play_next()
+        elif self.loop_index == len(self.queue):
+            self.loop_index = 1
+            self.play_next()
+        elif self.loop == 0:
+            self.loop_index = 0
+            self.play_next()
+            self.dequeue()
+        else:
+            self.loop_index = 0
+            self.play_next()
 
     def play_next(self):
         if self.loop == 0:
             self.now_playing = None
             if len(self.queue) == 0:
                 return
-            self.play(self.queue[0], after=lambda e: self.play_next())
+            self.play(self.queue[0], after=lambda e: self.after_play())
             self.now_playing = self.queue[0]
-            self.dequeue()
+            # self.dequeue()
         elif self.loop == 1:
-            self.play(self.now_playing, after=lambda e: self.play_next())
+            self.play(self.now_playing, after=lambda e: self.after_play())
             if self.timestamp != 0:
                 self.dequeue()
         elif self.loop == 2:
-            self.play(self.queue[1], after=lambda e: self.play_next())
+            print(self.loop_index)
+            print(len(self.queue))
+            self.play(self.queue[self.loop_index-1], after=lambda e: self.after_play())
+            print(self.queue)
         self.timestamp = 0
 
     def db_update(self, song):
-        print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
+        # print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
+        self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True)
+
 
 #TODO Figure out a more clever way to do this
 async def play_search(id, msg, client, ginst):
@@ -225,6 +240,8 @@ async def seek(args, msg, client, ginst):
     ginst.queue.insert(0, ginst.now_playing)
     ginst.vc.stop()
     await ginst.tc.send(f'⏩Set position to `{args}`')
+    ginst.loop_index -= 1
+    ginst.queue.pop(0)
     
 @Commands.add()
 async def search(args, msg, client, ginst):
@@ -245,12 +262,18 @@ async def search(args, msg, client, ginst):
 @Commands.add(alias='p')
 async def play(args, msg, client, ginst):
 
-    await ginst.connect(msg.author.voice.channel)
+    if msg.author.voice is not None:
+        await ginst.connect(msg.author.voice.channel)
+    else:
+        await ginst.tc.send('Join a voice channel to use this command!')
+        return
 
     if len(args) == 0:
         if ginst.vc.is_paused():
             ginst.vc.resume()
     else:
+        if ginst.loop_index == 0:
+            ginst.loop_index += 1
         query = args
         if query.startswith('https:'):
             song = Song.from_url(query, msg.author.name)
@@ -304,6 +327,7 @@ async def leave(args, msg, client, ginst):
     await ginst.vc.disconnect()
     ginst.vc = None
     ginst.queue = []
+    ginst.loop_index = 1
     ginst.time_playing = time.time()
 
 @Commands.add()
