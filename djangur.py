@@ -39,7 +39,7 @@ async def on_message(msg):
     args = split[1] if (len(split) == 2) else ''
 
     if cmd in Commands.command_map:
-        await Commands.command_map[cmd](args, msg=msg, client=client, ginst=ginst)
+        await Commands.command_map[cmd].fn(args, msg=msg, client=client, ginst=ginst)
     else:
         await msg.channel.send(f'{cmd}: Command not found.')
 
