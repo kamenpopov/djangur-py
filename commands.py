@@ -42,6 +42,7 @@ class Song:
             'prefer_ffmpeg': True,
         }
         with youtube_dl.YoutubeDL(ytdl_options) as ytdl:
+            ytdl.cache.remove()
             search = ytdl.extract_info(f'ytsearch:{query}', False)
             video = search['entries'][0]
             return Song(video['formats'][0]['url'], video['title'], video['description'], video['thumbnail'], video['duration'], video['id'], played_by)
@@ -198,7 +199,7 @@ async def ping(args, msg, client, ginst):
 
 @Commands.add(description='Shows the current playing song')
 async def np(args, msg, client, ginst):
-    
+    now_playing_title = ginst.now_playing.title
     if (ginst.now_playing == None):
         embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
         await ginst.tc.send(embed=embed);
@@ -303,7 +304,6 @@ async def play(args, msg, client, ginst):
 
 @Commands.add(alias='s', description='Skips current song')
 async def skip(args, msg, client, ginst):
-
     if ginst.vc.is_playing():
         ginst.vc.stop()
     if ginst.loop_index == 0:
