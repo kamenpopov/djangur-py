@@ -19,6 +19,9 @@ class Commands():
     def add(alias=None, description=None, usage=None):
         def wrap(f):
             Commands.command_map[f.__name__] = Command(f, alias, description, usage)
+            if alias != None:
+                Commands.command_map[alias] = Command(f, alias, description, usage)
+    
         return wrap
 
 
@@ -153,7 +156,6 @@ class Guild_Instance():
                 return
             self.play(self.queue[0], after=lambda e: self.after_play())
             self.now_playing = self.queue[0]
-            # self.dequeue()
         elif self.loop == 1:
             self.play(self.now_playing, after=lambda e: self.after_play())
             if self.timestamp != 0:
@@ -206,6 +208,7 @@ async def np(args, msg, client, ginst):
         embed = Embed(title=f'Now playing: {now_playing_title}')
         await ginst.tc.send(embed=embed);
         return
+    now_playing_title = ginst.now_playing.title
     timestamp = (time.time() - ginst.time_playing)
     display_timestamp = round((timestamp / ginst.now_playing.duration) * 30)
     display_timestamp_emoji = ''
@@ -303,6 +306,8 @@ async def play(args, msg, client, ginst):
 async def skip(args, msg, client, ginst):
     if ginst.vc.is_playing():
         ginst.vc.stop()
+    if ginst.loop_index == 0:
+        ginst.dequeue()
 
 @Commands.add(description='Pauses playback')
 async def pause(args, msg, client, ginst):
@@ -353,7 +358,7 @@ async def stats(args, msg, client, ginst):
     embed.add_field(name="Count: ", value=most_played['total_plays'], inline=False)
     await ginst.tc.send(embed=embed)
 
-@Commands.add(description='Sets the loop option between off/current/queue')
+@Commands.add(alias='l', description='Sets the loop option between off/current/queue')
 async def loop(args, msg, client, ginst):
     # 0 -> no loop; 1 -> loop current; 2 -> loop queue; 
     if ginst.loop == 0:
