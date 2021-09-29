@@ -187,7 +187,7 @@ async def help(args, msg, client, ginst):
     embed = Embed(title='Help')
     for key in Commands.command_map:
         cmd = Commands.command_map[key]
-        embed.add_field(name=cmd.fn.__name__, value=cmd.description, inline=False)
+        embed.add_field(name=cmd.fn.__name__, value=f'```{cmd.description}```', inline=False)
     await ginst.tc.send(embed=embed)
 
 @Commands.add(description='Pings the bot to check status')
