@@ -1,23 +1,24 @@
+from os import name
 import time
 from discord.player import FFmpegPCMAudio, PCMVolumeTransformer
 from discord import Embed
-from subprocess import run
-import tempfile
-from os import path
-from pymongo.collection import Collection
 import youtube_dl
-from contextlib import redirect_stdout
 import datetime
 
+
+class Command:
+    def __init__(self, fn, alias=None, description=None, usage=None):
+        self.fn = fn
+        self.alias = alias
+        self.description = description
+        self.usage = usage
 
 class Commands():
     command_map = {}
 
-    def add(alias=None):
+    def add(alias=None, description=None, usage=None):
         def wrap(f):
-            Commands.command_map[f.__name__] = f
-            if alias != None:
-                Commands.command_map[alias] = f
+            Commands.command_map[f.__name__] = Command(f, alias, description, usage)
         return wrap
 
 
@@ -76,6 +77,7 @@ class Guild_Instance():
         self.db = None
         self.loop = 0
         self.queue = []
+        self.loop_index = 0
         self.song_search = []
         self.searching = False
         self.audio_source = None
@@ -100,7 +102,13 @@ class Guild_Instance():
         desc = (song.description[:500] + '...') if len(song.description) > 500 else song.description
         embed = Embed(title=song.title, description=desc, url=f'{url}', color=0x00ffff)
         dur = str(datetime.timedelta(seconds=song.duration))
-        embed.set_footer(text=f'Duration: {dur}')
+        play_count = self.db.find_one({'_id': song.title})
+        if play_count is not None:
+            play_count = play_count['total_plays']
+            msg = f'This song has been played {play_count} times before!'
+        else:
+            msg = 'You are playing this for the first time!'
+        embed.set_footer(text=f'Duration: {dur}\n{msg}') 
         if song.thumbnail is not None:
             embed.set_thumbnail(url=song.thumbnail)
         await self.tc.send(embed=embed)
@@ -122,23 +130,43 @@ class Guild_Instance():
             self.db_update(song)
             self.time_playing = time.time()
         
+    def after_play(self):
+        if self.loop == 2 and self.loop_index <= len(self.queue)-1:
+            self.loop_index += 1
+            self.play_next()
+        elif self.loop_index == len(self.queue):
+            self.loop_index = 1
+            self.play_next()
+        elif self.loop == 0:
+            self.loop_index = 0
+            self.play_next()
+            self.dequeue()
+        else:
+            self.loop_index = 0
+            self.play_next()
 
     def play_next(self):
         if self.loop == 0:
             self.now_playing = None
             if len(self.queue) == 0:
                 return
-            self.play(self.queue[0], after=lambda e: self.play_next())
+            self.play(self.queue[0], after=lambda e: self.after_play())
             self.now_playing = self.queue[0]
-            self.dequeue()
+            # self.dequeue()
         elif self.loop == 1:
-            self.play(self.now_playing, after=lambda e: self.play_next())
+            self.play(self.now_playing, after=lambda e: self.after_play())
             if self.timestamp != 0:
                 self.dequeue()
+        elif self.loop == 2:
+            print(self.loop_index)
+            print(len(self.queue))
+            self.play(self.queue[self.loop_index-1], after=lambda e: self.after_play())
+            print(self.queue)
         self.timestamp = 0
 
     def db_update(self, song):
-        print(self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True).raw_result)
+        self.db.update_one({'_id': song.title}, {'$inc': {f'requested_by.{song.played_by}': 1, 'total_plays': 1}}, upsert=True)
+
 
 #TODO Figure out a more clever way to do this
 async def play_search(id, msg, client, ginst):
@@ -155,12 +183,21 @@ async def play_search(id, msg, client, ginst):
         ginst.play_next()
 
 @Commands.add()
+async def help(args, msg, client, ginst):
+    embed = Embed(title='Help')
+    for key in Commands.command_map:
+        cmd = Commands.command_map[key]
+        embed.add_field(name=cmd.fn.__name__, value=f'```{cmd.description}```', inline=False)
+    await ginst.tc.send(embed=embed)
+
+@Commands.add(description='Pings the bot to check status')
 async def ping(args, msg, client, ginst):
     await ginst.tc.send('pong')
-@Commands.add()
+
+@Commands.add(description='Shows the current playing song')
 async def np(args, msg, client, ginst):
     now_playing_title = ginst.now_playing.title
-    if (now_playing_title == None):
+    if (ginst.now_playing == None):
         embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
         await ginst.tc.send(embed=embed);
         return
@@ -185,7 +222,8 @@ async def np(args, msg, client, ginst):
     embed.add_field(name=f'```{display_timestamp_emoji}\n```', value=f'```{timestamp}/{video_timestamp}```')
     embed.set_thumbnail(url=ginst.now_playing.thumbnail)
     await ginst.tc.send(embed=embed)
-@Commands.add()
+
+@Commands.add(description='Seeks to the specified time in the song')
 async def seek(args, msg, client, ginst):
     if ginst.now_playing == None:
         embed = Embed(title='Not playing anything!', description='Use command play to add a song!')
@@ -217,8 +255,10 @@ async def seek(args, msg, client, ginst):
     ginst.queue.insert(0, ginst.now_playing)
     ginst.vc.stop()
     await ginst.tc.send(f'⏩Set position to `{args}`')
+    ginst.loop_index -= 1
+    ginst.queue.pop(0)
     
-@Commands.add()
+@Commands.add(description='Searches youtube for a song or video')
 async def search(args, msg, client, ginst):
 
     ginst.song_search = []
@@ -234,15 +274,21 @@ async def search(args, msg, client, ginst):
     await ginst.tc.send(embed=results_embed)
     ginst.searching = True
 
-@Commands.add(alias='p')
+@Commands.add(alias='p', description='Plays or searches for a song or video')
 async def play(args, msg, client, ginst):
 
-    await ginst.connect(msg.author.voice.channel)
+    if msg.author.voice is not None:
+        await ginst.connect(msg.author.voice.channel)
+    else:
+        await ginst.tc.send('Join a voice channel to use this command!')
+        return
 
     if len(args) == 0:
         if ginst.vc.is_paused():
             ginst.vc.resume()
     else:
+        if ginst.loop_index == 0:
+            ginst.loop_index += 1
         query = args
         if query.startswith('https:'):
             song = Song.from_url(query, msg.author.name)
@@ -252,29 +298,29 @@ async def play(args, msg, client, ginst):
         if not ginst.vc.is_playing():
             ginst.play_next()
 
-@Commands.add(alias='s')
+@Commands.add(alias='s', description='Skips current song')
 async def skip(args, msg, client, ginst):
 
     if ginst.vc.is_playing():
         ginst.vc.stop()
 
-@Commands.add()
+@Commands.add(description='Pauses playback')
 async def pause(args, msg, client, ginst):
 
     if ginst.vc.is_playing():
         ginst.vc.pause()
 
-@Commands.add()
+@Commands.add(description='Resumes playback')
 async def resume(args, msg, client, ginst):
     if ginst.vc.is_paused():
         ginst.vc.resume()
 
-@Commands.add()
+@Commands.add(description='Clears the queue')
 async def clear(args, msg, client, ginst):
     ginst.queue = []
     await ginst.tc.send("Cleared queue!")
 
-@Commands.add(alias='q')
+@Commands.add(alias='q', description='Lists all songs in queue')
 async def queue(args, msg, client, ginst):
     queue_str = ""
     if (args == 'clear'):
@@ -291,14 +337,15 @@ async def queue(args, msg, client, ginst):
         queue_embed.add_field(name="Songs:", value=queue_str)
         await ginst.tc.send(embed=queue_embed)
 
-@Commands.add()
+@Commands.add(description='The bot leaves the voice channel')
 async def leave(args, msg, client, ginst):
     await ginst.vc.disconnect()
     ginst.vc = None
     ginst.queue = []
+    ginst.loop_index = 1
     ginst.time_playing = time.time()
 
-@Commands.add()
+@Commands.add(description='Shows most played song in server')
 async def stats(args, msg, client, ginst):
     most_played = ginst.db.find_one(sort=[('total_plays', -1)])
     embed = Embed(title="Most Played Song")
@@ -306,7 +353,7 @@ async def stats(args, msg, client, ginst):
     embed.add_field(name="Count: ", value=most_played['total_plays'], inline=False)
     await ginst.tc.send(embed=embed)
 
-@Commands.add()
+@Commands.add(description='Sets the loop option between off/current/queue')
 async def loop(args, msg, client, ginst):
     # 0 -> no loop; 1 -> loop current; 2 -> loop queue; 
     if ginst.loop == 0:
@@ -319,7 +366,7 @@ async def loop(args, msg, client, ginst):
         ginst.loop = 0
         await ginst.tc.send("❌ Disabled looping!")
 
-@Commands.add(alias='r')
+@Commands.add(alias='r', description='Removes the song at specified index')
 async def remove(args, msg, client, ginst):
     if len(ginst.queue) == 0:
         queue_embed = Embed(title='Queue is empty!', description='Use command play to add a song!')
