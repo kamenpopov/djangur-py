@@ -1,5 +1,6 @@
+import asyncio
 import discord
-from commands import Commands, Guild_Instance, play_search
+from commands import Commands, Guild_Instance, leave, play_search
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ client = discord.Client()
 @client.event
 async def on_ready():
     print('Logged in as {0.user}'.format(client))
+    print(os.environ['prefix'])
 
 @client.event
 async def on_message(msg):
@@ -42,5 +44,30 @@ async def on_message(msg):
         await Commands.command_map[cmd].fn(args, msg=msg, client=client, ginst=ginst)
     else:
         await msg.channel.send(f'{cmd}: Command not found.')
+
+
+@client.event
+async def on_voice_state_update(member, before, after):
+    if not member.name == 'Джангър':
+        return
+    
+    elif before.channel is None:
+        ginst = Guild_Instance.by_id(after.channel.guild.id)
+        voice = after.channel.guild.voice_client
+        time = 0
+        while True:
+            await asyncio.sleep(1)
+            time = time + 1
+            if voice.is_playing() and not voice.is_paused():
+                time = 0
+            if time == 600:
+                print(await Commands.command_map['leave'].fn(None, None, None, ginst))
+            if not voice.is_connected():
+                break
+    elif before.channel is not None:
+        if after.channel is None:
+            ginst = Guild_Instance.by_id(before.channel.guild.id)
+            await Commands.command_map['leave'].fn(None, None, None, ginst)
+
 
 client.run(os.environ['token'])

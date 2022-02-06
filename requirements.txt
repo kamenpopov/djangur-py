@@ -4,3 +4,4 @@ discord
 python-dotenv
 pymongo
 dnspython
+asyncio
