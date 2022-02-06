@@ -92,6 +92,9 @@ class Guild_Instance():
         self.now_playing = None
         self.timestamp = 0
 
+    def __str__(self):
+        return(f'voice: {self.vc}\n text: {self.tc}\n loop: {self.loop}\n queue: {self.queue}\n loop_index: {self.loop_index}\n searching: {self.searching}\n audio_source: {self.audio_source}\n time_playing: {self.time_playing}\n now_playing: {self.now_playing}\n timestamp: {self.timestamp}\n')
+
     async def connect(self, channel):
         if channel is None:
             return
@@ -101,6 +104,8 @@ class Guild_Instance():
         elif channel.id != self.vc.channel.id:
             await self.vc.disconnect()
             self.vc = await channel.connect()
+            
+        print(self.vc)
 
     async def enqueue(self, song):
         url = ''
