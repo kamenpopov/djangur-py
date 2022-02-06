@@ -48,7 +48,7 @@ async def on_message(msg):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-    if not member.name == 'Джангър':
+    if not member.name == 'Tramvai':
         return
     
     elif before.channel is None:
