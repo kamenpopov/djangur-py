@@ -209,10 +209,13 @@ async def play_search(id, msg, client, ginst):
 @Commands.add()
 async def help(args, msg, client, ginst):
     embed = Embed(title='Help')
+    prev_name = ''
     for key in Commands.command_map:
         cmd = Commands.command_map[key]
-        embed.add_field(name=cmd.fn.__name__,
-                        value=f'```{cmd.description}```', inline=False)
+        if prev_name != '' and prev_name != cmd.fn.__name__:
+            embed.add_field(name=cmd.fn.__name__,
+                            value=f'```{cmd.description}```', inline=False)
+        prev_name = cmd.fn.__name__
     await ginst.tc.send(embed=embed)
 
 
