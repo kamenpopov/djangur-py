@@ -67,7 +67,7 @@ class Song:
 #                 video['duration'] if 'duration' in video else None,
 #                 video['id'] if 'id' in video else None,
                 video.get('title'),
-                video.get('description'),
+                video.get('description', ''),
                 video.get('thumbnail'),
                 video.get('duration'),
                 None,
