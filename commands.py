@@ -54,18 +54,23 @@ class Song:
     def from_url(url, played_by):
         with youtube_dl.YoutubeDL() as ytdl:
             video = ytdl.extract_info(url, False)
-            url = None
+            # url = None
             if 'formats' in video:
                 url = video['formats'][0]['url']
             elif 'url' in video:
                 url = video['url']
             return Song(
                 url,
-                video['title'] if 'title' in video else None,
-                video['description'] if 'description' in video else None,
-                video['thumbnail'] if 'thumbnail' in video else None,
-                video['duration'] if 'duration' in video else None,
-                video['id'] if 'id' in video else None,
+#                 video['title'] if 'title' in video else None,
+#                 video['description'] if 'description' in video else None,
+#                 video['thumbnail'] if 'thumbnail' in video else None,
+#                 video['duration'] if 'duration' in video else None,
+#                 video['id'] if 'id' in video else None,
+                video.get('title'),
+                video.get('description'),
+                video.get('thumbnail'),
+                video.get('duration'),
+                None,
                 played_by)
 
 
@@ -108,7 +113,7 @@ class Guild_Instance():
         print(self.vc)
 
     async def enqueue(self, song):
-        url = ''
+        url = song.url
         if song.v_id != None and song.duration != None:
             url = f'https://www.youtube.com/watch?v={song.v_id}'
         desc = (
